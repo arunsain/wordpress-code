@@ -1,1 +1,114 @@
+/////////////inventory list with pagination and search//////////////////////
 
+function get_inventory_list() { ?>
+<?php 
+
+    global $wpdb;
+    
+    $customPagHTML     = "";
+
+    if($_GET['price'] || $_GET['model'] || $_GET['make'] ){
+            $getCarPrice = trim($_GET['price']);
+            $getCarModel = trim($_GET['model']);
+            $getCarMake = trim($_GET['make']);
+        
+            $search = '';		
+    		if($getCarPrice!=''){
+    				
+    				$search .= 'PRICE >= '.$getCarPrice.' AND ';			
+    		}	
+    		
+    		if($getCarModel!=''){
+    				
+    				$search .= 'MODEL LIKE "%'.$getCarModel.'%" AND ';			
+    		}
+    		
+    		if($getCarMake!=''){				
+    				$search .= 'MAKE LIKE "%'.$getCarMake.'%" AND ';	
+    		}
+    		
+    		if($search!=''){
+    			$trim = trim($search,' AND ');
+    			$query = "SELECT * FROM `wp_continental_autocar` WHERE ".$trim;
+    		}else{
+    		    $query  = "SELECT * FROM wp_continental_autocar  ";
+    		}
+        
+         
+        
+    }else{
+       $query  = "SELECT * FROM wp_continental_autocar "; 
+    }
+
+    $total_query     = "SELECT COUNT(1) FROM (${query}) AS combined_table";
+    $total             = $wpdb->get_var( $total_query );
+    $items_per_page = 10;
+    $page             = isset( $_GET['cpage'] ) ? abs( (int) $_GET['cpage'] ) : 1;
+    $offset         = ( $page * $items_per_page ) - $items_per_page;
+    $result         = $wpdb->get_results( $query . " ORDER BY continental_autos_id DESC LIMIT ${offset}, ${items_per_page}" );
+    $totalPage         = ceil($total / $items_per_page);
+
+
+    if($totalPage > 1){
+        // $customPagHTML     =  '<div><span>Page '.$page.' of '.$totalPage.'</span>&nbsp;&nbsp;'.paginate_links( array(
+         $customPagHTML     =  paginate_links( array(
+        'base' => add_query_arg( 'cpage', '%#%' ),
+        'format' => '',
+        'prev_text' => __('&laquo;'),
+        'next_text' => __('&raquo;'),
+        'total' => $totalPage,
+        'current' => $page
+        )).'</div>';
+    }
+
+?>
+        <form  action="">
+            <div >
+              <input type="text" class="form-control" value="<?php if(!empty($_GET['make'])){ echo $_GET['make']; } ?>"   placeholder="Enter make" name="make">
+            </div>
+            <div>
+              <input type="text"  value="<?php if(!empty($_GET['model'])){ echo $_GET['model']; } ?>" class="form-control"  placeholder="Enter model" name="model">
+            </div>
+            <div >
+              <input type="text" class="form-control" value="<?php if(!empty($_GET['price'])){ echo $_GET['price']; } ?>" placeholder="Enter price" name="price">
+            </div>
+            <button type="submit" class="btn btn-default">See Detail</button>
+        </form>
+
+        <div class="port">
+        <ul>
+            <?php if(!empty($result)){ ?>
+            <?php foreach($result as $results){ ?>
+            <li>
+                <?php if(!empty($results->IMAGES)){
+                    $getImageArray = explode(",",$results->IMAGES);
+                    $getImage = $getImageArray[0];
+              
+                }else{
+                    $getImage = "http://idealwebweavers.com/continental/wp-content/uploads/2021/03/carmodel.jpg";
+                }
+                ?>
+                <img src="<?php echo $getImage;  ?>">
+                <div class="np">
+                <div class="name">
+                   <h2><?php echo $results->MANUFACTURED_YEAR; ?> <?php echo $results->MAKE; ?> <?php echo $results->MODEL; ?></h2>
+                   <div class="price">Price : <span>$<?php echo $results->PRICE; ?></span></div>
+                </div>
+                </div>
+                <div class="detail">
+                <p>Exterior: <?php echo $results->COLOUR; ?></p>
+                <p>Interior: </p>
+                <p>Transmission:  <?php echo $results->TRANSMISSION; ?></p>
+                <p>Mileage: <?php echo number_format($results->MILEAGE); ?> miles</p>
+                <a href="#">INQUIRE</a>
+                </div>
+          </li>
+          <?php } ?>
+          <?php } ?>
+       </ul>
+    </div>
+<?php echo $customPagHTML; ?>
+
+<?php }
+
+add_shortcode('inventory', 'get_inventory_list');
